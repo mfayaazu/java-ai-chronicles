@@ -1,5 +1,6 @@
 package com.infinotive.ai_issue_investigator;
 
+import com.infinotive.ai_issue_investigator.dto.IncidentTriageResponse;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationRequest;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationResponse;
 import com.infinotive.ai_issue_investigator.service.IssueInvestigationService;
@@ -18,5 +19,10 @@ public class IssueInvestigatorController {
     @PostMapping("/investigate")
     public IssueInvestigationResponse investigate(@RequestBody IssueInvestigationRequest request) {
         return issueInvestigationService.investigate(request);
+    }
+
+    @PostMapping("/triage")
+    public IncidentTriageResponse triage(@RequestBody IssueInvestigationRequest request) {
+        return issueInvestigationService.triage(request);
     }
 }
