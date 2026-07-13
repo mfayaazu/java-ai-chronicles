@@ -1,197 +1,139 @@
 # The Java × AI Chronicles
 
-A build-in-public journey exploring how Java, Spring Boot, Spring AI, and local LLMs can be used to build enterprise-style AI applications.
+A build-in-public learning project focused on **Enterprise AI Engineering with Java**.
 
-This project is an **AI Production Issue Investigator**. It helps analyze production-style issues and convert messy incident descriptions into structured engineering insight.
-
----
-
-## Tech Stack
+This repository contains a local AI-powered production issue investigation application built with:
 
 - Java 21
 - Spring Boot
 - Spring AI
 - Ollama
 - Llama 3.2
-- Maven
-- REST API
+- REST APIs
+
+The goal is not to build a generic chatbot.
+
+The goal is to explore how AI can assist real enterprise engineering workflows such as production incident investigation, triage, escalation support, and decision support — while still keeping Java engineering fundamentals in control.
 
 ---
 
-## Why This Project Exists
+## Project: AI Production Issue Investigator
 
-Modern enterprise systems generate a lot of operational noise: logs, incidents, queue failures, service issues, deployment problems, and production alerts.
+This application exposes REST APIs that accept production-style issue descriptions and use a local LLM to assist with investigation and triage.
 
-The goal of this project is to explore how AI can assist backend engineers by:
-
-- Summarizing production issues
-- Suggesting likely root causes
-- Recommending immediate checks
-- Supporting incident triage
-- Converting unstructured issue descriptions into structured decision support
-
-AI does not replace engineering judgement. It supports engineers by helping them reason faster and more consistently.
+The application runs locally using Ollama, so no paid API is required.
 
 ---
 
-## Local Setup
-
-### 1. Start Ollama
-
-```bash
-ollama serve
-```
-
-### 2. Run Llama 3.2
-
-```bash
-ollama run llama3.2
-```
-
-### 3. Start the Spring Boot Application
-
-```bash
-mvn spring-boot:run
-```
-
-Application runs on:
+## Architecture
 
 ```text
-http://localhost:8080
+Client / Terminal
+      ↓
+Spring Boot REST Controller
+      ↓
+Validation & API Contract
+      ↓
+Issue Investigation Service
+      ↓
+Java Guardrail Logic
+      ↓
+Spring AI
+      ↓
+Ollama / Llama 3.2
+```
+
+Important design idea:
+
+```text
+AI assists with understanding messy incident descriptions.
+Java controls validation, contracts, guardrails, and final safety decisions.
 ```
 
 ---
 
-# Episode 1: Local AI-Powered Production Issue Investigator
+# Episodes
 
-## Goal
+## Episode 1: Local AI-Powered Java Application
 
-Build the first working version of a Java application that can talk to a local LLM using Spring AI and Ollama.
+The first episode focused on proving the basic integration.
 
-## What Was Built
+### Goal
 
-A REST endpoint that accepts a production-style issue as plain text and returns an AI-generated investigation summary.
+Build a Spring Boot application that can send a production issue to a local LLM and receive an investigation response.
 
-## Endpoint
+### What was built
 
-```http
-POST /api/issues/investigate
-```
-
-## Request Example
-
-```bash
-curl -s -X POST http://localhost:8080/api/issues/investigate \
-  -H "Content-Type: text/plain" \
-  -d "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
-```
-
-## Response Includes
+A REST endpoint that accepts a production issue and returns:
 
 - Incident summary
 - Most likely root causes
 - Immediate checks
-- Commands, logs, or dashboards to verify
+- Logs or dashboards to verify
 - Suggested fix
 - Risk if ignored
 
-## Key Learning
+### Key learning
 
-AI can assist engineers with investigation direction, but engineers must still validate the output before trusting it in production.
+AI can help engineers generate investigation direction, but the engineer still needs to validate the output.
 
-The first version worked, but it also showed that AI responses can be too generic or include unsafe assumptions if the prompt is not controlled properly.
+The first version worked, but the AI response could still suggest details that may not apply to every environment. That was the first lesson in prompt control and engineering judgement.
 
 ---
 
-# Episode 2: From Demo Code to Enterprise-Style Service
+## Episode 2: From Demo Code to Enterprise-Style Service
 
-## Goal
+Episode 2 improved the structure of the application.
 
-Refactor the application from a simple demo into a cleaner Spring Boot structure.
+### Goal
 
-## What Was Improved
+Move from a simple demo-style controller into a cleaner Spring Boot architecture.
 
-The first version had AI logic directly inside the controller. In Episode 2, the application was refactored into a cleaner flow:
+### What changed
+
+The flow was refactored into:
 
 ```text
 Controller → Service → Spring AI / Ollama
 ```
 
-## Improvements Added
+Request and response DTOs were introduced.
 
-- Created request and response DTOs
-- Moved AI logic into a service layer
-- Improved prompt control
-- Reduced risk of fake or environment-specific command suggestions
-- Made the API accept structured JSON input
+### Example request
 
-## Endpoint
-
-```http
-POST /api/issues/investigate
+```json
+{
+  "environment": "QA",
+  "serviceName": "activemq-consumer-service",
+  "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
+}
 ```
 
-## Request Example
+### Key learning
 
-```bash
-curl -s -X POST http://localhost:8080/api/issues/investigate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "environment": "QA",
-    "serviceName": "activemq-consumer-service",
-    "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
-  }' | jq -r '.investigation' | glow
-```
+Working AI code is not enough.
 
-## Key Learning
-
-Working AI code is not enough. Enterprise AI applications need clean structure, clear responsibilities, and safer prompt control.
-
-The system prompt was improved to guide the model away from inventing unknown commands and toward safer production checks such as:
-
-- Broker UI
-- Consumer logs
-- DLQ message inspection
-- Retry count
-- Poison message headers
-- JMX / Jolokia metrics
-- Kubernetes logs where applicable
+Enterprise applications still need clean layering, clear API contracts, maintainable services, and controlled prompts.
 
 ---
 
-# Episode 3: AI Incident Decision Engine
+## Episode 3: AI Incident Decision Engine
 
-## Goal
+Episode 3 made the use case more AI-driven.
 
-Move beyond generating investigation text and make the AI return a structured incident decision.
+### Goal
 
-## What Was Built
+Instead of only generating a long investigation text, the application now converts an unstructured production issue into a structured incident decision.
 
-A new triage endpoint that converts an unstructured production issue into structured decision support.
-
-Instead of only returning a long text answer, the application now classifies the issue and returns fields such as severity, priority, owner team, escalation decision, and reasoning.
-
-## Endpoint
+### Endpoint
 
 ```http
 POST /api/issues/triage
 ```
 
-## Request Example
+### What the AI returns
 
-```bash
-curl -s -X POST http://localhost:8080/api/issues/triage \
-  -H "Content-Type: application/json" \
-  -d '{
-    "environment": "QA",
-    "serviceName": "activemq-consumer-service",
-    "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
-  }' | jq
-```
-
-## Response Fields
-
-The AI returns a structured incident decision including:
+The triage response includes:
 
 - Severity
 - Priority score
@@ -207,80 +149,253 @@ The AI returns a structured incident decision including:
 - Confidence score
 - Reasoning
 
-## Example Response Shape
+### Why AI is useful here
 
-```json
-{
-  "severity": "HIGH",
-  "priorityScore": 8,
-  "category": "Messaging",
-  "environment": "QA",
-  "serviceName": "activemq-consumer-service",
-  "probableOwnerTeam": "Backend / Integration Team",
-  "shouldEscalate": true,
-  "escalationReason": "Repeated DLQ growth may indicate delayed processing, poison messages, or repeated operational intervention.",
-  "suspectedCauses": [
-    "Poison message",
-    "Consumer processing failure",
-    "Retry policy issue"
-  ],
-  "immediateActions": [
-    "Inspect DLQ message details",
-    "Check consumer logs",
-    "Verify retry and acknowledgement behavior"
-  ],
-  "businessImpact": "Delayed message processing and possible downstream impact if unresolved.",
-  "confidenceScore": 78,
-  "reasoning": "The issue is recurring after manual clearing, which suggests a repeated processing failure rather than a one-time queue backlog."
-}
-```
+Normal Java code can validate fields and route requests.
 
-## Key Learning
+But AI can understand messy, human-written production issue descriptions and convert them into structured decision support.
+
+### Key learning
 
 AI is not only useful for generating text.
 
-It can also help transform messy, human-written production issue descriptions into structured engineering decisions.
-
-Normal Java code can validate fields and route requests, but AI can understand unstructured operational context and support triage decisions.
+It can also help transform unstructured operational information into structured engineering decisions.
 
 The engineer still owns the final judgement.
 
 ---
 
-## Current Project Flow
+## Episode 4: AI Needs Engineering Guardrails
+
+Episode 4 focuses on an important enterprise AI lesson:
 
 ```text
-User / Engineer
-      ↓
-Spring Boot REST API
-      ↓
-Controller
-      ↓
-Service Layer
-      ↓
-Spring AI ChatClient
-      ↓
-Ollama
-      ↓
-Llama 3.2
-      ↓
-Investigation or Structured Incident Decision
+AI is powerful, but AI alone is not enough for production systems.
+```
+
+### Goal
+
+Add production-readiness and Java-based guardrails around the AI incident triage flow.
+
+### What was added
+
+- Request validation
+- Clean API error responses
+- Global exception handling
+- Java-based guardrail decision
+- Human review requirement
+- Final decision source
+- Applied guardrails list
+
+### Why this matters
+
+Not every request should reach AI.
+
+Some problems are better handled deterministically by Java validation and API contracts.
+
+AI should assist when it adds value, but Java should still control:
+
+- Validation
+- API contracts
+- Error handling
+- Safety rules
+- Guardrail decisions
+- Human review requirements
+
+---
+
+## Episode 4 Demo Scenarios
+
+### Scenario 1: Invalid request
+
+Request:
+
+```json
+{
+  "environment": "",
+  "serviceName": "",
+  "issue": "short"
+}
+```
+
+Expected result:
+
+```json
+{
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Request validation failed",
+  "validationErrors": {
+    "environment": "Environment is required",
+    "serviceName": "Service name is required",
+    "issue": "Issue description must be between 20 and 4000 characters"
+  }
+}
+```
+
+### Lesson
+
+This request should not go to AI.
+
+Java validation rejects it first.
+
+---
+
+### Scenario 2: Valid production issue
+
+Request:
+
+```json
+{
+  "environment": "QA",
+  "serviceName": "activemq-consumer-service",
+  "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
+}
+```
+
+The response includes AI-supported triage plus Java guardrail fields:
+
+```json
+{
+  "severity": "HIGH",
+  "priorityScore": 8,
+  "shouldEscalate": true,
+  "guardrailDecision": "ESCALATE",
+  "humanReviewRequired": true,
+  "finalDecisionSource": "JAVA_GUARDRAIL_SERVICE",
+  "aiGenerated": true
+}
+```
+
+### Lesson
+
+AI helps classify the incident.
+
+Java applies the final guardrail decision and decides whether human review is required.
+
+---
+
+# API Endpoints
+
+## Investigation Endpoint
+
+```http
+POST /api/issues/investigate
+```
+
+Returns a detailed investigation-style response.
+
+## Triage Endpoint
+
+```http
+POST /api/issues/triage
+```
+
+Returns a structured incident decision.
+
+---
+
+# Running Locally
+
+## 1. Start Ollama
+
+```bash
+ollama serve
+```
+
+## 2. Pull and run the model
+
+```bash
+ollama run llama3.2
+```
+
+## 3. Start the Spring Boot application
+
+```bash
+mvn spring-boot:run
+```
+
+The application runs on:
+
+```text
+http://localhost:8080
 ```
 
 ---
 
-## Lessons So Far
+# Example Commands
 
-1. A local LLM can be integrated into a Java application without paid APIs.
-2. Prompt design strongly affects the quality and safety of AI output.
-3. AI output must be validated by engineers.
-4. Clean Spring Boot architecture still matters in AI applications.
-5. Structured AI output is more useful than plain text for enterprise workflows.
-6. AI works best as decision support, not as an unchecked decision maker.
+## Invalid request test
+
+```bash
+curl -s -X POST http://localhost:8080/api/issues/triage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "environment": "",
+    "serviceName": "",
+    "issue": "short"
+  }' | jq
+```
+
+## Valid triage test
+
+```bash
+curl -s -X POST http://localhost:8080/api/issues/triage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "environment": "QA",
+    "serviceName": "activemq-consumer-service",
+    "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
+  }' | jq
+```
+
+## Investigation test with formatted Markdown output
+
+```bash
+curl -s -X POST http://localhost:8080/api/issues/investigate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "environment": "QA",
+    "serviceName": "activemq-consumer-service",
+    "issue": "ActiveMQ DLQ is increasing continuously. We clear the queue but messages keep coming back. No obvious error in application logs."
+  }' | jq -r '.investigation' | glow
+```
 
 ---
 
-## Next Episode
+# Key Learnings So Far
 
-Episode 4 will focus on improving production readiness by adding validation, error handling, and cleaner API responses.
+## Episode 1
 
+AI can help generate troubleshooting direction, but engineers must validate the output.
+
+## Episode 2
+
+A working AI demo still needs clean Spring Boot architecture.
+
+## Episode 3
+
+AI can convert messy production issue descriptions into structured decision support.
+
+## Episode 4
+
+AI needs engineering guardrails.
+
+AI can assist engineers, but enterprise systems still require validation, contracts, error handling, safety rules, and human judgement.
+
+---
+
+# Main Message
+
+This project is based on one principle:
+
+```text
+AI is not replacing engineering fundamentals.
+AI is making strong engineering even more important.
+```
+
+Java developers are still needed to design, validate, secure, control, and operate AI-powered enterprise systems.
+
+AI can help with reasoning, classification, summarization, and decision support.
+
+But production systems still need strong software engineering.

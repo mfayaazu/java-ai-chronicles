@@ -1,10 +1,13 @@
 package com.infinotive.ai_issue_investigator.service;
 
+import com.infinotive.ai_issue_investigator.dto.AiIncidentTriageResult;
 import com.infinotive.ai_issue_investigator.dto.IncidentTriageResponse;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationRequest;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class IssueInvestigationService {
@@ -79,7 +82,8 @@ public class IssueInvestigationService {
     }
 
     public IncidentTriageResponse triage(IssueInvestigationRequest request) {
-        return chatClient.prompt()
+
+        AiIncidentTriageResult aiResult = chatClient.prompt()
                 .system("""
                         You are a senior production incident triage engineer.
                         
@@ -108,6 +112,58 @@ public class IssueInvestigationService {
                         request.issue()
                 ))
                 .call()
-                .entity(IncidentTriageResponse.class);
+                .entity(AiIncidentTriageResult.class);
+
+        String guardrailDecision = determineGuardrailDecision(aiResult);
+        boolean humanReviewRequired = isHumanReviewRequired(aiResult);
+
+        return new IncidentTriageResponse(
+                aiResult.severity(),
+                aiResult.priorityScore(),
+                aiResult.category(),
+                aiResult.environment(),
+                aiResult.serviceName(),
+                aiResult.probableOwnerTeam(),
+                aiResult.shouldEscalate(),
+                aiResult.escalationReason(),
+                aiResult.suspectedCauses(),
+                aiResult.immediateActions(),
+                aiResult.businessImpact(),
+                aiResult.confidenceScore(),
+                aiResult.reasoning(),
+                guardrailDecision,
+                humanReviewRequired,
+                "JAVA_GUARDRAIL_SERVICE",
+                true,
+                List.of(
+                        "Request validated before AI call",
+                        "AI output converted into structured DTO",
+                        "Final guardrail decision calculated by Java service",
+                        "Human review required when severity, priority, or confidence crosses safety threshold",
+                        "AI is used for decision support, not blind automation"
+                )
+        );
+    }
+
+    private String determineGuardrailDecision(AiIncidentTriageResult aiResult) {
+        if ("CRITICAL".equalsIgnoreCase(aiResult.severity())) {
+            return "ESCALATE_IMMEDIATELY";
+        }
+
+        if ("HIGH".equalsIgnoreCase(aiResult.severity()) && aiResult.priorityScore() >= 7) {
+            return "ESCALATE";
+        }
+
+        if (aiResult.shouldEscalate()) {
+            return "REVIEW_AND_ESCALATE_IF_CONFIRMED";
+        }
+
+        return "MONITOR";
+    }
+
+    private boolean isHumanReviewRequired(AiIncidentTriageResult aiResult) {
+        return aiResult.confidenceScore() < 70
+                || "CRITICAL".equalsIgnoreCase(aiResult.severity())
+                || aiResult.priorityScore() >= 8;
     }
 }

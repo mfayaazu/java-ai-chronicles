@@ -2,7 +2,7 @@ package com.infinotive.ai_issue_investigator.dto;
 
 import java.util.List;
 
-public record IncidentTriageResponse(
+public record AiIncidentTriageResult(
         String severity,
         int priorityScore,
         String category,
@@ -15,12 +15,6 @@ public record IncidentTriageResponse(
         List<String> immediateActions,
         String businessImpact,
         int confidenceScore,
-        String reasoning,
-
-        String guardrailDecision,
-        boolean humanReviewRequired,
-        String finalDecisionSource,
-        boolean aiGenerated,
-        List<String> appliedGuardrails
+        String reasoning
 ) {
 }

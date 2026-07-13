@@ -4,6 +4,7 @@ import com.infinotive.ai_issue_investigator.dto.IncidentTriageResponse;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationRequest;
 import com.infinotive.ai_issue_investigator.dto.IssueInvestigationResponse;
 import com.infinotive.ai_issue_investigator.service.IssueInvestigationService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,7 +23,7 @@ public class IssueInvestigatorController {
     }
 
     @PostMapping("/triage")
-    public IncidentTriageResponse triage(@RequestBody IssueInvestigationRequest request) {
+    public IncidentTriageResponse triage(@Valid @RequestBody IssueInvestigationRequest request) {
         return issueInvestigationService.triage(request);
     }
 }
